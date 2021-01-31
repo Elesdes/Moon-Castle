@@ -49,7 +49,7 @@
 	<div id="instructions">
 		<span style="font-size:36px">Click to play</span>
 		<br/><br/>
-		Move: WASD<br/>
+		Move: ZQSD<br/>
 		Jump: SPACE<br/>
 		Look: MOUSE
 	</div>
@@ -59,9 +59,9 @@
 
 	import * as THREE from '../build/three.module.js';
 	import Stats from './jsm/libs/stats.module.js';
-	import PointerLockControls from './jsm/controls/PointerLockControls.js';
-	import GUI from './jsm/libs/dat.gui.module.js';
-	import GLTFLoader from './jsm/loaders/GLTFLoader.js';
+	import {PointerLockControls} from './jsm/controls/PointerLockControls.js';
+	import {GUI} from './jsm/libs/dat.gui.module.js';
+	import {GLTFLoader} from './jsm/loaders/GLTFLoader.js';
 
 
 	let camera, scene, renderer, controls, boxPlan, gui;
@@ -195,12 +195,12 @@
 			switch (event.keyCode) {
 
 				case 38: // up
-				case 87: // w
+				case 122: // z
 					moveForward = true;
 					break;
 
 				case 37: // left
-				case 65: // a
+				case 71: // q
 					moveLeft = true;
 					break;
 
@@ -228,12 +228,12 @@
 			switch (event.keyCode) {
 
 				case 38: // up
-				case 87: // w
+				case 122: // z
 					moveForward = false;
 					break;
 
 				case 37: // left
-				case 65: // a
+				case 71: // q
 					moveLeft = false;
 					break;
 
