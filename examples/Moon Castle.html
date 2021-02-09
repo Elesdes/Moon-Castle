@@ -47,7 +47,7 @@
 <div id="blocker">
 
 	<div id="instructions">
-		<span style="font-size:36px">Click to play</span>
+		<span style="font-size:36px">Click to Enter</span>
 		<br/><br/>
 		Move: ZQSD<br/>
 		Jump: SPACE<br/>
@@ -64,7 +64,11 @@
 	import {GLTFLoader} from './jsm/loaders/GLTFLoader.js';
 
 
-	let camera, scene, renderer, controls, boxPlan, gui;
+      //HORSE 
+    const radius = 600;
+    let theta = 0;
+    let mixer,mixer0,mixer1 ;
+	let camera, scene, renderer, controls, boxPlan, gui, container, stats;
 
 	// variable pour l'arrière:
 	let cylinderFaceBM, cylinderFaceBMH, boxFaceBMH, coneFaceBMH, boxBAr, boxHAr, boxAA;
@@ -96,22 +100,38 @@
 
 	init();
 	animate();
-	soldat();
-	zombie();
+	sun();
+	alien();
+	earth();
+	telescoop();
 	buildGui();
 
 	function init() {
 
-		camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 3500);
-		camera.position.set(0, -200, -1200);
+		camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 30500);
+		camera.position.set(0, -210, -1200);
 		camera.lookAt(0, -200, -1000);
+        //changement de scene 
+		setInterval(function(){
+       if(camera.position.x>-900 && camera.position.x<-300   && camera.position.z>370  && camera.position.z<970 ){
+			window.location = "http://localhost/Moon-Castle-add-gabriel/examples/Telescoop.html";
+		}
+     	}, 1000);
+
+        //changement de scene    (0, -210, -630);  0, -200, -1200
+		setInterval(function(){
+       if(camera.position.x>-100 && camera.position.x<100   && camera.position.z>-700 && camera.position.z<-400 ){
+	
+			window.location = "http://localhost/Moon-Castle-add-gabriel/examples/home.html";
+	    }
+		}, 1000);
 
 		scene = new THREE.Scene();
-		scene.background = new THREE.TextureLoader().load('textures/ciel2.jpg');
-		scene.fog = new THREE.Fog(scene.background, 2500, 3500); //brouillard
+		//scene.background = new THREE.TextureLoader().load('textures/ciel_nuit.jpg');
+		//scene.background.repeat.set(30,30);
+		//scene.fog = new THREE.Fog(scene.background, 2500, 3500); //brouillard
 
 		var loader = new THREE.TextureLoader();
-
 		var texture = new THREE.TextureLoader().load('textures/chateau1.jpg');
 		var texture2 = new THREE.TextureLoader().load('textures/chateau.jpg');
 		var texture3 = new THREE.TextureLoader().load('textures/crate.gif');
@@ -148,6 +168,7 @@
 		//shadowCameraHelper = new THREE.CameraHelper(spotLight.shadow.camera);
 		//scene.add(shadowCameraHelper);
 
+
 		// son
 		//créé un audio
 		var listener = new THREE.AudioListener();
@@ -156,7 +177,7 @@
 		var sound = new THREE.Audio(listener);
 
 		var audioLoader = new THREE.AudioLoader();
-		audioLoader.load('sounds/358232_j_s_song.mp3', function (buffer) {
+		audioLoader.load('sounds/scarySounds.mp3', function (buffer) {
 			sound.setBuffer(buffer);
 			sound.setLoop(true);
 			sound.setVolume(0.5);
@@ -306,6 +327,9 @@
 
 		var geometryBox = new THREE.PlaneBufferGeometry(8000, 8000);
 		var materialBox = new THREE.MeshPhongMaterial({map: texture4, dithering: true});
+		texture4.wrapS = texture4.wrapT = THREE.RepeatWrapping;
+        texture4.offset.set( 0, 0 );
+        texture4.repeat.set( 10, 10 );
 		boxPlan = new THREE.Mesh(geometryBox, materialBox);
 		boxPlan.position.set(70, -275, 300);
 		boxPlan.receiveShadow = true;
@@ -535,6 +559,18 @@
 			x = -x;
 		}
 
+				// Stats:
+
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				stats = new Stats();
+				container.appendChild( stats.dom );
+
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+
 		renderer = new THREE.WebGLRenderer({antialias: true});
 		renderer.setPixelRatio(window.devicePixelRatio);
 		renderer.setSize(window.innerWidth, window.innerHeight);
@@ -546,8 +582,107 @@
 
 		window.addEventListener('resize', onWindowResize, false);
 
+						//skybox:
+
+
+        let materialArray = [];
+        let texture_ft = new THREE.TextureLoader().load( 'textures/ciel_nuit.jpg');
+        let texture_bk = new THREE.TextureLoader().load( 'textures/ciel_nuit.jpg');//textures/cube/MilkyWay/dark-s_nx.jpg
+        let texture_up = new THREE.TextureLoader().load( 'textures/ciel_nuit.jpg');
+        let texture_dn = new THREE.TextureLoader().load( 'textures/ciel_nuit.jpg');//textures/planets/moon_1024.jpg
+        let texture_rt = new THREE.TextureLoader().load( 'textures/ciel_nuit.jpg')//;textures/ciel2.jpg
+        let texture_lf = new THREE.TextureLoader().load( 'textures/ciel_nuit.jpg');
+          
+        materialArray.push(new THREE.MeshBasicMaterial( { map: texture_ft }));
+        materialArray.push(new THREE.MeshBasicMaterial( { map: texture_bk }));
+        materialArray.push(new THREE.MeshBasicMaterial( { map: texture_up }));
+        materialArray.push(new THREE.MeshBasicMaterial( { map: texture_dn }));
+        materialArray.push(new THREE.MeshBasicMaterial( { map: texture_rt }));
+        materialArray.push(new THREE.MeshBasicMaterial( { map: texture_lf }));
+ 
+        for (let i = 0; i < 6; i++)
+           materialArray[i].side = THREE.BackSide;
+        let skyboxGeo = new THREE.BoxGeometry( 30000, 30000, 30000);
+        let skybox = new THREE.Mesh( skyboxGeo, materialArray );
+        scene.add( skybox );  
+        animate();
+      
+
+	}
+	
+
+	
+
+	function telescoop() {
+
+			const loaders = new GLTFLoader();
+			loaders.load(
+					// resource URL
+					'telescoop/scene.gltf',
+					// called when the resource is loaded
+					function (gltf) {
+
+						var telescoop = gltf.scene;
+						telescoop.scale.set(100, 100, 100);
+						telescoop.position.x = -600;
+						telescoop.position.y =-275 ;
+						telescoop.position.z = 670;
+						telescoop.castShadow = true;
+						telescoop.rotateY(Math.PI/2);
+						scene.add(telescoop);
+
+					}
+			);
+		
 	}
 
+	function earth() {
+
+			const loaders = new GLTFLoader();
+			loaders.load(
+					// resource URL
+					'earth/scene.gltf',
+					// called when the resource is loaded
+					function (gltf) {
+
+						var earth = gltf.scene;
+						mixer0 = new THREE.AnimationMixer(earth);
+                        mixer0.clipAction( gltf.animations[ 0 ]).setDuration(1/100000).play();
+						earth.scale.set(6000, 6000, 6000);//earth.scale.set(7950, 7950, 7950);
+						earth.position.x = -1500;
+						earth.position.y =6000 ;//12905
+						earth.position.z = 19000;//18500
+						earth.castShadow = true;
+						scene.add(earth);
+
+					}
+			);
+		
+	}
+   
+    function sun() {
+
+			const loaders = new GLTFLoader();
+			loaders.load(
+					// resource URL
+					'sun/scene.gltf',
+					// called when the resource is loaded
+					function (gltf) {
+
+						var sun = gltf.scene;
+						mixer1 = new THREE.AnimationMixer(sun);
+                        mixer1.clipAction( gltf.animations[ 0 ]).setDuration(1/100000).play();
+						sun.scale.set(50,50, 50);//earth.scale.set(7950, 7950, 7950);
+						sun.position.x = -10000;
+						sun.position.y =100 ;//12905
+						sun.position.z = 10000;//18500
+						sun.castShadow = true;
+						scene.add(sun);
+
+					}
+			);
+		
+	}
 	function soldat() {
 
 		for (let i = 0; i < 5; i++) {
@@ -574,6 +709,9 @@
 			);
 		}
 	}
+
+
+
 
 	/*        function esprit2(){
 
@@ -618,12 +756,12 @@
 								z = Math.random() * (-2000 + 0) - 0;
 						var zombie = gltf.scene;
 						scene.add(zombie);
-
+                        
 						zombie.scale.set(0.7, 0.7, 0.7);
 						zombie.position.x = x;
 						zombie.position.y = y;
 						zombie.position.z = z;
-
+                        
 
 						var texture5 = new THREE.TextureLoader().load('textures/gravure.jpg');
 						var geometryBox = new THREE.BoxBufferGeometry(45, 160, 10);
@@ -642,7 +780,7 @@
 		const loader = new GLTFLoader();
 		loader.load(
 				// resource URL
-				'models/gltf/arbre/scene.gltf',
+				'tree/scene.gltf',
 				// called when the resource is loaded
 				function (gltf) {
 					var tree = gltf.scene;
@@ -706,15 +844,73 @@
 		}
 	}
 
+  
+	
+	function alien() {
 
+		
+           for (let i = 0; i < 1; i++) {
+			const loaders = new GLTFLoader();
+			loaders.load(
+					// resource URL
+					'alien/scene.gltf',
+					// called when the resource is loaded
+					function (gltf) {
+						//let x = Math.random() * 900 - 500, z = Math.random() * 400 + 200;
+						var alien = gltf.scene;
+						mixer = new THREE.AnimationMixer( alien);
+                        mixer.clipAction( gltf.animations[ 0 ]).setDuration(1/100000).play();
+                        alien.scale.set(0.7,0.7, 0.7);
+						alien.position.x = -500;
+						alien.position.y = -275;
+						alien.position.z = 400;
+						alien.castShadow = true;
+                        scene.add(alien);
+
+        	
+	
+					}
+			);
+		}
+	}
+
+/*
 	function render() {
-
+	              
 		lightHelper.update();
 
 		shadowCameraHelper.update();
 
+	}*/
+	function render() {
+                if ( mixer ) {
 
-	}
+                    const time = Date.now();
+
+                    mixer.update(time*0.001);
+
+                }
+
+                if ( mixer1 ) {
+
+                    const time = Date.now();
+
+                    mixer1.update(time*0.001);
+
+                }
+
+                if ( mixer0 ) {
+
+                    const time = Date.now();
+
+                    mixer0.update(time*0.001);
+
+                }
+                 
+                renderer.render( scene, camera );
+
+            }
+	
 
 	function onWindowResize() {
 
@@ -827,12 +1023,14 @@
 		gui.open();
 
 	}
-
-	render();
-
+  
+		
 	function animate() {
-
+	     render();
 		requestAnimationFrame(animate);
+
+        stats.update();
+		
 
 		const time = performance.now();
 
