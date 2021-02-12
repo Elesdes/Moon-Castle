@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>Three.js - Moon Castle</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link type="text/css" rel="stylesheet" href="main.css">
+	<style>
+		#blocker {
+			position: absolute;
+			width: 100%;
+			height: 100%;
+			background-color: transparent;
+		}
+
+		#instructions {
+			width: 100%;
+			height: 100%;
+
+			display: -webkit-box;
+			display: -moz-box;
+			display: box;
+
+			-webkit-box-orient: horizontal;
+			-moz-box-orient: horizontal;
+			box-orient: horizontal;
+
+			-webkit-box-pack: center;
+			-moz-box-pack: center;
+			box-pack: center;
+
+			-webkit-box-align: center;
+			-moz-box-align: center;
+			box-align: center;
+
+			color: #ffffff;
+			text-align: center;
+			font-family: Arial;
+			font-size: 14px;
+			line-height: 24px;
+
+			cursor: pointer;
+		}
+	</style>
+</head>
+<body>
+<div id="blocker">
+
+	<div id="instructions">
+		<span style="font-size:36px">Click to Enter</span>
+		<br/><br/>
+		Move: ZQSD<br/>
+		Jump: SPACE<br/>
+		Look: MOUSE
+	</div>
+
+</div>
+<script type="module">
+
+	import * as THREE from '../build/three.module.js';
+	import Stats from './jsm/libs/stats.module.js';
+	import {PointerLockControls} from './jsm/controls/PointerLockControls.js';
+	import {GUI} from './jsm/libs/dat.gui.module.js';
+	import {GLTFLoader} from './jsm/loaders/GLTFLoader.js';
+
+
+      //HORSE 
+    const radius = 600;
+    let theta = 0;
+    let mixer,mixer0,mixer1 ;
+	let camera, scene, renderer, controls, boxPlan, gui, container, stats;
+
+	// variable pour l'arrière:
+	let cylinderFaceBM, cylinderFaceBMH, boxFaceBMH, coneFaceBMH, boxBAr, boxHAr, boxAA;
+	//variable des cotés:
+	let boxCote;
+	//variable de l'entrée:
+	let boxFaceBMB, boxFaceBMBF, coneFaceBMHA, boxFacePillier;
+	//variale des piliers en forme de cylindre:
+	let coneTour, cylinderBaseB, cylinderBaseH;
+	//variable lumière:
+	let spotLight, lightHelper, shadowCameraHelper, magObjet;
+	//variable pour l'animation:
+	let tombe;
+	//variable compteur:
+	let c = 0;
+	let params = {};
+	//variables first person controls
+	let moveForward = false;
+	let moveBackward = false;
+	let moveLeft = false;
+	let moveRight = false;
+	let canJump = false;
+	//variables first person physics
+	let prevTime = performance.now();
+	const velocity = new THREE.Vector3();
+	const direction = new THREE.Vector3();
+	let raycaster;
+	const objects = [];
+
+	init();
+	animate();
+	sun();
+	alien();
+	earth();
+	telescoop();
+	buildGui();
+
+	function init() {
+
+		camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 30500);
+		camera.position.set(0, -210, -1200);
+		camera.lookAt(0, -200, -1000);
+        //changement de scene 
+		setInterval(function(){
+       if(camera.position.x>-900 && camera.position.x<-300   && camera.position.z>370  && camera.position.z<970 ){
+			window.location = "http://localhost/Moon-Castle-add-gabriel/examples/Telescoop.html";
+		}
+     	}, 1000);
+
+        //changement de scene    (0, -210, -630);  0, -200, -1200
+		setInterval(function(){
+       if(camera.position.x>-100 && camera.position.x<100   && camera.position.z>-700 && camera.position.z<-400 ){
+	
+			window.location = "http://localhost/Moon-Castle-add-gabriel/examples/home.html";
+	    }
+		}, 1000);
+
+		scene = new THREE.Scene();
+		//scene.background = new THREE.TextureLoader().load('textures/ciel_nuit.jpg');
+		//scene.background.repeat.set(30,30);
+		//scene.fog = new THREE.Fog(scene.background, 2500, 3500); //brouillard
+
+		var loader = new THREE.TextureLoader();
+		var texture = new THREE.TextureLoader().load('textures/chateau1.jpg');
+		var texture2 = new THREE.TextureLoader().load('textures/chateau.jpg');
+		var texture3 = new THREE.TextureLoader().load('textures/crate.gif');
+		var texture4 = new THREE.TextureLoader().load('textures/planets/moon_1024.jpg');
+
+		//effet naturel plus:
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.repeat.set(2, 1);
+
+		//type ambiance: essai retire
+		const ambient = new THREE.AmbientLight(0xffffff, 0.1);
+		scene.add(ambient);
+
+		spotLight = new THREE.PointLight(0xffee88, 1, 100, 2);
+		spotLight = new THREE.SpotLight(0xffffff, 1);
+		spotLight.position.set(600, 650, 700);
+		spotLight.angle = Math.PI / 4;
+		spotLight.penumbra = 0.1;
+		spotLight.decay = 1;
+		spotLight.distance = 3000;
+
+		spotLight.castShadow = true;
+		spotLight.shadow.mapSize.width = 512;
+		spotLight.shadow.mapSize.height = 512;
+		spotLight.shadow.camera.near = 10;
+		spotLight.shadow.camera.far = 2000;
+		spotLight.shadow.focus = 1;
+		scene.add(spotLight);
+
+		//lightHelper = new THREE.SpotLightHelper(spotLight);
+		//scene.add(lightHelper);
+
+		//shadowCameraHelper = new THREE.CameraHelper(spotLight.shadow.camera);
+		//scene.add(shadowCameraHelper);
+
+
+		// son
+		//créé un audio
+		var listener = new THREE.AudioListener();
+		camera.add(listener);
+
+		var sound = new THREE.Audio(listener);
+
+		var audioLoader = new THREE.AudioLoader();
+		audioLoader.load('sounds/scarySounds.mp3', function (buffer) {
+			sound.setBuffer(buffer);
+			sound.setLoop(true);
+			sound.setVolume(0.5);
+			sound.play();
+		});
+
+		controls = new PointerLockControls(camera, document.body);
+
+		const blocker = document.getElementById('blocker');
+		const instructions = document.getElementById('instructions');
+
+		instructions.addEventListener('click', function () {
+
+			controls.lock();
+
+		}, false);
+
+		controls.addEventListener('lock', function () {
+
+			instructions.style.display = 'none';
+			blocker.style.display = 'none';
+
+		});
+
+		controls.addEventListener('unlock', function () {
+
+			blocker.style.display = 'block';
+			instructions.style.display = '';
+
+		});
+
+		scene.add(controls.getObject());
+
+		const onKeyDown = function (event) {
+
+			switch (event.keyCode) {
+
+				case 38: // up
+				case 90: // z
+					moveForward = true;
+					break;
+
+				case 37: // left
+				case 81: // q
+					moveLeft = true;
+					break;
+
+				case 40: // down
+				case 83: // s
+					moveBackward = true;
+					break;
+
+				case 39: // right
+				case 68: // d
+					moveRight = true;
+					break;
+
+				case 32: // space
+					if (canJump === true) velocity.y += 350;
+					canJump = false;
+					break;
+
+			}
+
+		};
+
+		const onKeyUp = function (event) {
+
+			switch (event.keyCode) {
+
+				case 38: // up
+				case 90: // z
+					moveForward = false;
+					break;
+
+				case 37: // left
+				case 81: // q
+					moveLeft = false;
+					break;
+
+				case 40: // down
+				case 83: // s
+					moveBackward = false;
+					break;
+
+				case 39: // right
+				case 68: // d
+					moveRight = false;
+					break;
+
+			}
+
+		};
+
+		document.addEventListener('keydown', onKeyDown, false);
+		document.addEventListener('keyup', onKeyUp, false);
+
+		raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0), 0, 10);
+
+		//construction de la base du pllier cubique en bas arrière:
+
+		for (let i = 1; i <= 4; i++) {
+			let x = 120;
+			var geometryBox = new THREE.BoxBufferGeometry(100, 60, 100);
+			var materialBox = new THREE.MeshPhongMaterial({map: texture, dithering: true});
+			for (let i = 1; i <= 2; i++) {
+				boxBAr = new THREE.Mesh(geometryBox, materialBox);
+				boxBAr.position.set(x, -250, -20);
+				boxBAr.castShadow = true;
+				scene.add(boxBAr);
+				x = -x;
+			}
+			for (let i = 1; i <= 2; i++) {
+				boxBAr = new THREE.Mesh(geometryBox, materialBox);
+				boxBAr.position.set(x, -250, -245);
+				boxBAr.castShadow = true;
+				scene.add(boxBAr);
+				x = -x;
+			}
+		}
+
+		//construction de la base du pilier cubique en haut arrière:
+
+		for (let i = 1; i <= 4; i++) {
+			let x = 121;
+			var geometryBox = new THREE.BoxBufferGeometry(100, 250, 100);
+			var materialBox = new THREE.MeshPhongMaterial({map: texture, dithering: true});
+			for (let i = 1; i <= 2; i++) {
+				boxHAr = new THREE.Mesh(geometryBox, materialBox);
+				boxHAr.position.set(x, -100, -25);
+				boxHAr.castShadow = true;
+				scene.add(boxHAr);
+				x = -x;
+			}
+			for (let i = 1; i <= 2; i++) {
+				boxHAr = new THREE.Mesh(geometryBox, materialBox);
+				boxHAr.position.set(x, -95, -245);
+				boxHAr.castShadow = true;
+				scene.add(boxHAr);
+				x = -x;
+			}
+		}
+
+		/*----------------------------------------------------------------------------------------------------------------------------*/
+
+		//construction du plan:
+
+		var geometryBox = new THREE.PlaneBufferGeometry(8000, 8000);
+		var materialBox = new THREE.MeshPhongMaterial({map: texture4, dithering: true});
+		texture4.wrapS = texture4.wrapT = THREE.RepeatWrapping;
+        texture4.offset.set( 0, 0 );
+        texture4.repeat.set( 10, 10 );
+		boxPlan = new THREE.Mesh(geometryBox, materialBox);
+		boxPlan.position.set(70, -275, 300);
+		boxPlan.receiveShadow = true;
+		boxPlan.rotation.x = -Math.PI / 2.0;
+		scene.add(boxPlan);
+
+
+		//construction de la base cylindrique en milieu bas:
+
+		var geometryCylinder = new THREE.CylinderBufferGeometry(80, 80, 50);
+		var materialCylinder = new THREE.MeshPhongMaterial({map: texture, dithering: true});
+		cylinderFaceBM = new THREE.Mesh(geometryCylinder, materialCylinder);
+		cylinderFaceBM.position.set(0, -250, 0);
+		cylinderFaceBM.castShadow = true;
+		scene.add(cylinderFaceBM);
+
+		//construction de la base cylindrique en milieu haut:
+
+		var geometryCylinder = new THREE.CylinderBufferGeometry(80, 80, 100);
+		var materialCylinder = new THREE.MeshPhongMaterial({map: texture, dithering: true});
+		cylinderFaceBMH = new THREE.Mesh(geometryCylinder, materialCylinder);
+		cylinderFaceBMH.position.set(0, -180, -5);
+		cylinderFaceBMH.castShadow = true;
+		scene.add(cylinderFaceBMH);
+
+		//construction de la base cubique en milieu haut:
+
+		var geometryBox = new THREE.BoxBufferGeometry(250, 230, 260);
+		var materialBox = new THREE.MeshPhongMaterial({map: texture, dithering: true});
+		boxFaceBMH = new THREE.Mesh(geometryBox, materialBox);
+		boxFaceBMH.position.set(0, -165, -140);
+		boxFaceBMH.castShadow = true;
+		scene.add(boxFaceBMH);
+
+		//construction de la base cone en milieu haut:
+
+		var geometryCone = new THREE.ConeBufferGeometry(125, 150, 4);
+		var materialCone = new THREE.MeshPhongMaterial({map: texture, dithering: true});
+		coneFaceBMH = new THREE.Mesh(geometryCone, materialCone);
+		coneFaceBMH.position.set(0, 25, -140);
+		coneFaceBMH.castShadow = true;
+		scene.add(coneFaceBMH);
+
+		/*-----------------------------------------------------------------------------------------------------------*/
+
+		//construction bas des piliers en forme cylindrique:
+
+		for (let i = 1; i <= 4; i++) {
+			let x = 515;
+			var geometryCylinder = new THREE.CylinderBufferGeometry(70, 70, 60);
+			var materialCylinder = new THREE.MeshPhongMaterial({map: texture, dithering: true});
+			for (let i = 1; i <= 2; i++) {
+				cylinderBaseB = new THREE.Mesh(geometryCylinder, materialCylinder);
+				cylinderBaseB.position.set(x, -250, 0);
+				x = -x;
+				cylinderBaseB.castShadow = true;
+				scene.add(cylinderBaseB);
+
+			}
+			for (let i = 1; i <= 2; i++) {
+				cylinderBaseB = new THREE.Mesh(geometryCylinder, materialCylinder);
+				cylinderBaseB.position.set(x, -270, -600);
+				x = -x;
+				cylinderBaseB.castShadow = true;
+				scene.add(cylinderBaseB);
+			}
+		}
+
+		//construction haut des piliers en forme cylindrique:
+
+		for (let i = 1; i <= 4; i++) {
+			let x = 516;
+			var geometryCylinder = new THREE.CylinderBufferGeometry(68, 68, 350);
+			var materialCylinder = new THREE.MeshPhongMaterial({map: texture, dithering: true});
+			for (let i = 1; i <= 2; i++) {
+				cylinderBaseH = new THREE.Mesh(geometryCylinder, materialCylinder);
+				cylinderBaseH.position.set(x, -48, -2);
+				x = -x;
+				cylinderBaseH.castShadow = true;
+				scene.add(cylinderBaseH);
+			}
+			for (let i = 1; i <= 2; i++) {
+				cylinderBaseH = new THREE.Mesh(geometryCylinder, materialCylinder);
+				cylinderBaseH.position.set(x, -64, -600);
+				x = -x;
+				cylinderBaseH.castShadow = true;
+				scene.add(cylinderBaseH);
+			}
+		}
+
+		//construction des cônes au-dessus des piliers cylindriques:
+
+		for (let i = 1; i <= 4; i++) {
+			let x = 516;
+			let y = 190;
+			let z = -600;
+			let w = -2;
+			let v = 207;
+			var geometryCone = new THREE.ConeBufferGeometry(68, 160, 8);
+			var materialCone = new THREE.MeshPhongMaterial({map: texture, dithering: true});
+			for (let i = 1; i <= 2; i++) {
+				coneTour = new THREE.Mesh(geometryCone, materialCone);
+				coneTour.position.set(x, y, z);
+				x = -x;
+				cylinderBaseH.castShadow = true;
+				scene.add(coneTour);
+			}
+			for (let i = 1; i <= 2; i++) {
+				coneTour = new THREE.Mesh(geometryCone, materialCone);
+				coneTour.position.set(x, v, w);
+				x = -x;
+				cylinderBaseH.castShadow = true;
+				scene.add(coneTour);
+			}
+		}
+
+		//construction cubique rempart:
+
+		let z = 310;
+		for (let i = 1; i <= 4; i++) {
+			var geometryBox = new THREE.BoxBufferGeometry(300, 60, 40);
+			var materialBox = new THREE.MeshPhongMaterial({map: texture, dithering: true});
+			boxAA = new THREE.Mesh(geometryBox, materialBox);
+			boxAA.castShadow = true;
+			scene.add(boxAA);
+			if (i <= 2) {
+				boxAA.position.set(z, -250, 0);
+				z = -z;
+			}
+			if (i > 2) {
+				boxAA.position.set(z, -250, -578);
+				z = -z;
+			}
+		}
+		for (let i = 1; i <= 4; i++) {
+			var geometryBox = new THREE.BoxBufferGeometry(300, 140, 37);
+			var materialBox = new THREE.MeshPhongMaterial({map: texture, dithering: true});
+			boxAA = new THREE.Mesh(geometryBox, materialBox);
+			boxAA.castShadow = true;
+			scene.add(boxAA);
+			if (i <= 2) {
+				boxAA.position.set(z, -157, -575);
+				z = -z;
+			}
+			if (i > 2) {
+				boxAA.position.set(z, -157, -3);
+				z = -z;
+			}
+		}
+
+		// CONSTRUCTION DES COTÉS DU CHATEAU:
+
+		//construction bas et haut des côtés:
+
+		let w = 500;
+		for (let i = 1; i <= 2; i++) {
+			var geometryBox = new THREE.BoxBufferGeometry(50, 50, 600);
+			var materialBox = new THREE.MeshPhongMaterial({map: texture, dithering: true});
+			boxCote = new THREE.Mesh(geometryBox, materialBox);
+			boxCote.position.set(w, -270, -300);
+			boxCote.castShadow = true;
+			scene.add(boxCote);
+			w = -w;
+		}
+		for (let i = 1; i <= 2; i++) {
+			var geometryBox = new THREE.BoxBufferGeometry(30, 200, 600);
+			var materialBox = new THREE.MeshPhongMaterial({map: texture, dithering: true});
+			boxCote = new THREE.Mesh(geometryBox, materialBox);
+			boxCote.position.set(w, -200, -300);
+			boxCote.castShadow = true;
+			scene.add(boxCote);
+			w = -w;
+		}
+
+		/*---------------------------------------------------------------------------------------------------------------------------------------*/
+
+		// CONSTRUCTION DE L'ENTRÉE DU CHATEAU:
+
+		//construction de la Porte base:
+
+		var geometryBox = new THREE.BoxBufferGeometry(135, 200, 100);
+		var materialBox = new THREE.MeshPhongMaterial({map: texture2, dithering: true});
+		boxFaceBMB = new THREE.Mesh(geometryBox, materialBox);
+		boxFaceBMB.position.set(0, -180, -581);
+		boxFaceBMB.castShadow = true;
+		scene.add(boxFaceBMB);
+
+		//construction de la Porte fine:
+
+		var geometryBox = new THREE.BoxBufferGeometry(70, 130, 10);
+		var materialBox = new THREE.MeshPhongMaterial({map: texture3, dithering: true});
+		boxFaceBMBF = new THREE.Mesh(geometryBox, materialBox);
+		boxFaceBMBF.position.set(0, -210, -630);
+		boxFaceBMBF.castShadow = true;
+		scene.add(boxFaceBMBF);
+
+		//construction de la base cone en milieu haut:
+
+		var geometryCone = new THREE.ConeBufferGeometry(50, 100, 6);
+		var materialCone = new THREE.MeshPhongMaterial({map: texture, dithering: true});
+		coneFaceBMHA = new THREE.Mesh(geometryCone, materialCone);
+		coneFaceBMHA.position.set(0, -26, -578);
+		coneFaceBMHA.castShadow = true;
+		scene.add(coneFaceBMHA);
+
+		/*--------------------------------------------------------------------------------------------------------------------------------*/
+
+		//construction de la base du pllier cubique en bas && haut avant:
+
+		let x = 120;
+		for (let i = 1; i <= 2; i++) {
+			var geometryBox = new THREE.BoxBufferGeometry(100, 60, 100);
+			var materialBox = new THREE.MeshPhongMaterial({map: texture, dithering: true});
+			boxFacePillier = new THREE.Mesh(geometryBox, materialBox);
+			boxFacePillier.position.set(x, -250, -581);
+			boxFacePillier.castShadow = true;
+			scene.add(boxFacePillier);
+			x = -x;
+		}
+		for (let i = 1; i <= 2; i++) {
+			var geometryBox = new THREE.BoxBufferGeometry(100, 250, 100);
+			var materialBox = new THREE.MeshPhongMaterial({map: texture, dithering: true});
+			boxFacePillier = new THREE.Mesh(geometryBox, materialBox);
+			boxFacePillier.position.set(x, -95, -578);
+			boxFacePillier.castShadow = true;
+			scene.add(boxFacePillier);
+			x = -x;
+		}
+
+				// Stats:
+
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				stats = new Stats();
+				container.appendChild( stats.dom );
+
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+
+		renderer = new THREE.WebGLRenderer({antialias: true});
+		renderer.setPixelRatio(window.devicePixelRatio);
+		renderer.setSize(window.innerWidth, window.innerHeight);
+		document.body.appendChild(renderer.domElement);
+
+		renderer.shadowMap.enabled = true; //rajout de l'ombre
+		renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+		renderer.outputEncoding = THREE.sRGBEncoding;
+
+		window.addEventListener('resize', onWindowResize, false);
+
+						//skybox:
+
+
+        let materialArray = [];
+        let texture_ft = new THREE.TextureLoader().load( 'textures/ciel_nuit.jpg');
+        let texture_bk = new THREE.TextureLoader().load( 'textures/ciel_nuit.jpg');//textures/cube/MilkyWay/dark-s_nx.jpg
+        let texture_up = new THREE.TextureLoader().load( 'textures/ciel_nuit.jpg');
+        let texture_dn = new THREE.TextureLoader().load( 'textures/ciel_nuit.jpg');//textures/planets/moon_1024.jpg
+        let texture_rt = new THREE.TextureLoader().load( 'textures/ciel_nuit.jpg')//;textures/ciel2.jpg
+        let texture_lf = new THREE.TextureLoader().load( 'textures/ciel_nuit.jpg');
+          
+        materialArray.push(new THREE.MeshBasicMaterial( { map: texture_ft }));
+        materialArray.push(new THREE.MeshBasicMaterial( { map: texture_bk }));
+        materialArray.push(new THREE.MeshBasicMaterial( { map: texture_up }));
+        materialArray.push(new THREE.MeshBasicMaterial( { map: texture_dn }));
+        materialArray.push(new THREE.MeshBasicMaterial( { map: texture_rt }));
+        materialArray.push(new THREE.MeshBasicMaterial( { map: texture_lf }));
+ 
+        for (let i = 0; i < 6; i++)
+           materialArray[i].side = THREE.BackSide;
+        let skyboxGeo = new THREE.BoxGeometry( 30000, 30000, 30000);
+        let skybox = new THREE.Mesh( skyboxGeo, materialArray );
+        scene.add( skybox );  
+        animate();
+      
+
+	}
+	
+
+	
+
+	function telescoop() {
+
+			const loaders = new GLTFLoader();
+			loaders.load(
+					// resource URL
+					'telescoop/scene.gltf',
+					// called when the resource is loaded
+					function (gltf) {
+
+						var telescoop = gltf.scene;
+						telescoop.scale.set(100, 100, 100);
+						telescoop.position.x = -600;
+						telescoop.position.y =-275 ;
+						telescoop.position.z = 670;
+						telescoop.castShadow = true;
+						telescoop.rotateY(Math.PI/2);
+						scene.add(telescoop);
+
+					}
+			);
+		
+	}
+
+	function earth() {
+
+			const loaders = new GLTFLoader();
+			loaders.load(
+					// resource URL
+					'earth/scene.gltf',
+					// called when the resource is loaded
+					function (gltf) {
+
+						var earth = gltf.scene;
+						mixer0 = new THREE.AnimationMixer(earth);
+                        mixer0.clipAction( gltf.animations[ 0 ]).setDuration(1/100000).play();
+						earth.scale.set(6000, 6000, 6000);//earth.scale.set(7950, 7950, 7950);
+						earth.position.x = -1500;
+						earth.position.y =6000 ;//12905
+						earth.position.z = 19000;//18500
+						earth.castShadow = true;
+						scene.add(earth);
+
+					}
+			);
+		
+	}
+   
+    function sun() {
+
+			const loaders = new GLTFLoader();
+			loaders.load(
+					// resource URL
+					'sun/scene.gltf',
+					// called when the resource is loaded
+					function (gltf) {
+
+						var sun = gltf.scene;
+						mixer1 = new THREE.AnimationMixer(sun);
+                        mixer1.clipAction( gltf.animations[ 0 ]).setDuration(1/100000).play();
+						sun.scale.set(50,50, 50);//earth.scale.set(7950, 7950, 7950);
+						sun.position.x = -10000;
+						sun.position.y =100 ;//12905
+						sun.position.z = 10000;//18500
+						sun.castShadow = true;
+						scene.add(sun);
+
+					}
+			);
+		
+	}
+	function soldat() {
+
+		for (let i = 0; i < 5; i++) {
+
+			const loaders = new GLTFLoader();
+			loaders.load(
+					// resource URL
+					'models/gltf/soldat/scene.gltf',
+					// called when the resource is loaded
+					function (gltf) {
+						let x = Math.random() * 900 - 500, z = Math.random() * 400 + 400;
+
+						var soldat = gltf.scene;
+						scene.add(soldat);
+
+						soldat.scale.set(50, 50, 50);
+						soldat.position.x = x;
+						soldat.position.y = -275;
+						soldat.position.z = z;
+						soldat.castShadow = true;
+						soldat.rotation();
+
+					}
+			);
+		}
+	}
+
+
+
+
+	/*        function esprit2(){
+
+		for(let i=0;i<2;i++){
+
+			const loaders = new GLTFLoader();
+			loaders.load(
+					// resource URL
+					'models/gltf/esprit2/scene.gltf',
+					// called when the resource is loaded
+					function (gltf){
+
+						var esprit2 = gltf.scene;
+						scene.add(esprit2);
+
+						esprit2.scale.set(50, 50, 50);
+						esprit2.position.x = 0;
+						esprit2.position.y = -130;
+						esprit2.position.z = 10;
+						esprit2.castShadow = true;
+
+					}
+
+
+
+
+			);
+		}}*/
+
+	function zombie() {
+
+		for (let i = 0; i < 5; i++) {
+
+			const loaders = new GLTFLoader();
+			loaders.load(
+					// resource URL
+					'models/gltf/zombie1/scene.gltf',
+					// called when the resource is loaded
+					function (gltf) {
+
+						let x = Math.random() * 18000 - 4000, y = Math.random() * 25 - 300,
+								z = Math.random() * (-2000 + 0) - 0;
+						var zombie = gltf.scene;
+						scene.add(zombie);
+                        
+						zombie.scale.set(0.7, 0.7, 0.7);
+						zombie.position.x = x;
+						zombie.position.y = y;
+						zombie.position.z = z;
+                        
+
+						var texture5 = new THREE.TextureLoader().load('textures/gravure.jpg');
+						var geometryBox = new THREE.BoxBufferGeometry(45, 160, 10);
+						var materialBox = new THREE.MeshPhongMaterial({map: texture5, dithering: true});
+						tombe = new THREE.Mesh(geometryBox, materialBox);
+						tombe.position.set(x, -265, z - 60);
+						tombe.castShadow = true;
+						scene.add(tombe);
+
+					}
+			);
+		}
+	}
+
+	function tree(x, z) {
+		const loader = new GLTFLoader();
+		loader.load(
+				// resource URL
+				'tree/scene.gltf',
+				// called when the resource is loaded
+				function (gltf) {
+					var tree = gltf.scene;
+					scene.add(tree);
+
+					tree.animations; // Array<THREE.AnimationClip>
+					tree.scene; // THREE.Group
+					tree.scenes; // Array<THREE.Group>
+					tree.cameras; // Array<THREE.Camera>
+					tree.asset; // Object
+					tree.scale.set(100, 100, 100);
+					tree.position.y = -150;
+					tree.position.x = x;
+					tree.position.z = z;
+					tree.receiveShadow = true;
+					tree.castShadow = true;
+
+				},
+				// called while loading is progressing
+				function (xhr) {
+
+					console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+
+				},
+				// called when loading has errors
+				function (error) {
+
+					console.log('An error happened');
+
+				}
+		);
+	}
+
+	for (var i = 0; i < 10; i++) {
+		var treex = Math.random() * 3000;
+		var treez = Math.random() * 3000;
+		if (treex > 600) {
+			tree(treex, treez);
+		}
+	}
+	for (var i = 0; i < 10; i++) {
+		var treex = -Math.random() * 3000;
+		var treez = Math.random() * 3000;
+		if (treex < -700) {
+			tree(treex, treez);
+		}
+	}
+	for (var i = 0; i < 10; i++) {
+		var treex = Math.random() * 3000;
+		var treez = -Math.random() * 3000;
+		if (treex > 600) {
+			tree(treex, treez);
+		}
+	}
+	for (var i = 0; i < 10; i++) {
+		var treex = -Math.random() * 3000;
+		var treez = -Math.random() * 3000;
+		if (treex < -700
+		) {
+			tree(treex, treez);
+		}
+	}
+
+  
+	
+	function alien() {
+
+		
+           for (let i = 0; i < 1; i++) {
+			const loaders = new GLTFLoader();
+			loaders.load(
+					// resource URL
+					'alien/scene.gltf',
+					// called when the resource is loaded
+					function (gltf) {
+						//let x = Math.random() * 900 - 500, z = Math.random() * 400 + 200;
+						var alien = gltf.scene;
+						mixer = new THREE.AnimationMixer( alien);
+                        mixer.clipAction( gltf.animations[ 0 ]).setDuration(1/100000).play();
+                        alien.scale.set(0.7,0.7, 0.7);
+						alien.position.x = -500;
+						alien.position.y = -275;
+						alien.position.z = 400;
+						alien.castShadow = true;
+                        scene.add(alien);
+
+        	
+	
+					}
+			);
+		}
+	}
+
+/*
+	function render() {
+	              
+		lightHelper.update();
+
+		shadowCameraHelper.update();
+
+	}*/
+	function render() {
+                if ( mixer ) {
+
+                    const time = Date.now();
+
+                    mixer.update(time*0.001);
+
+                }
+
+                if ( mixer1 ) {
+
+                    const time = Date.now();
+
+                    mixer1.update(time*0.001);
+
+                }
+
+                if ( mixer0 ) {
+
+                    const time = Date.now();
+
+                    mixer0.update(time*0.001);
+
+                }
+                 
+                renderer.render( scene, camera );
+
+            }
+	
+
+	function onWindowResize() {
+
+		camera.aspect = window.innerWidth / window.innerHeight;
+		camera.updateProjectionMatrix();
+
+		renderer.setSize(window.innerWidth, window.innerHeight);
+
+	}
+
+	function buildGui() {
+
+		gui = new GUI();
+		const params = {
+			'light color': spotLight.color.getHex(),
+			intensity: spotLight.intensity,
+			distance: spotLight.distance,
+			angle: spotLight.angle,
+			penumbra: spotLight.penumbra,
+			decay: spotLight.decay,
+			focus: spotLight.shadow.focus,
+			fog: false
+		};
+
+		gui.addColor(params, 'light color').onChange(function (val) {
+
+			spotLight.color.setHex(val);
+			render();
+
+		});
+
+		gui.add(params, 'intensity', 0, 2).onChange(function (val) {
+
+			spotLight.intensity = val;
+			render();
+
+		});
+
+
+		gui.add(params, 'distance', 50, 4000).onChange(function (val) {
+
+
+			// construction objet magique:
+
+			var tab = [];
+			if (spotLight.distance >= 1000) {
+				console.log('ok');
+				scene.remove(magObjet);
+			} else {
+
+				let x = -650, z = 130, y = 200, k = 0;
+				var points = [];
+
+				for (let i = 0; i < 10; i++) {
+					points.push(new THREE.Vector2(Math.cos(i * 0.2) * 15 + 7, (i - 5) * 5));
+				}
+				let texture5 = new THREE.TextureLoader().load('textures/spirit.jpg');
+				const geometryLathe = new THREE.LatheBufferGeometry(points);
+				const materialLathe = new THREE.MeshBasicMaterial({map: texture5});
+				magObjet = new THREE.Mesh(geometryLathe, materialLathe);
+				magObjet.position.x = Math.random() * 2000 - 1150;
+				magObjet.position.y = Math.random() * 500 - 100;
+				magObjet.position.z = Math.random() * 2000 - 1150;
+				tab[k] = magObjet;
+
+				scene.add(tab[k]);
+				k++;
+			}
+
+			spotLight.distance = val;
+			render();
+		});
+
+		gui.add(params, 'angle', 0, Math.PI / 3).onChange(function (val) {
+
+			spotLight.angle = val;
+			render();
+
+		});
+
+		gui.add(params, 'penumbra', 0, 1).onChange(function (val) {
+
+			spotLight.penumbra = val;
+			render();
+
+		});
+
+		gui.add(params, 'decay', 1, 2).onChange(function (val) {
+
+			spotLight.decay = val;
+			render();
+
+		});
+
+		gui.add(params, 'focus', 0, 1).onChange(function (val) {
+
+			spotLight.shadow.focus = val;
+			render();
+
+		});
+
+		gui.add(params, 'fog').onChange(function (val) {
+			scene.fog = new THREE.Fog(scene.background, 0, 1800);
+
+			if (params.fog == !true) {
+				scene.fog = new THREE.Fog(scene.background, 2500, 3500); //brouillard initial
+			}
+		});
+
+		gui.open();
+
+	}
+  
+		
+	function animate() {
+	     render();
+		requestAnimationFrame(animate);
+
+        stats.update();
+		
+
+		const time = performance.now();
+
+		if (controls.isLocked === true) {
+			raycaster.ray.origin.copy(controls.getObject().position);
+			raycaster.ray.origin.y -= 10;
+
+			const intersections = raycaster.intersectObjects(objects);
+
+			const onObject = intersections.length > 0;
+
+			const delta = (time - prevTime) / 1000;
+
+			velocity.x -= velocity.x * 2.0 * delta;
+			velocity.z -= velocity.z * 2.0 * delta;
+
+			velocity.y -= velocity.y * 2.0 * delta; // 100.0 = mass
+
+			direction.z = Number(moveForward) - Number(moveBackward);
+			direction.x = Number(moveRight) - Number(moveLeft);
+			direction.normalize(); // this ensures consistent movements in all directions
+
+			if (moveForward || moveBackward) velocity.z -= direction.z * 400.0 * delta;
+			if (moveLeft || moveRight) velocity.x -= direction.x * 400.0 * delta;
+
+			if (onObject === true) {
+
+				velocity.y = Math.max(0, velocity.y);
+				canJump = true;
+
+			}
+
+			controls.moveRight(-velocity.x * delta);
+			controls.moveForward(-velocity.z * delta);
+
+			controls.getObject().position.y += (velocity.y * delta); // new behavior
+
+			if (controls.getObject().position.y <= -200) {
+
+				velocity.y = 0;
+				controls.getObject().position.y = -200;
+
+				canJump = true;
+
+			}
+
+			prevTime = time;
+
+			renderer.render(scene, camera);
+		}
+	}
+
+</script>
+</body>
+</html>
